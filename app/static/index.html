@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clothing Segments — Human Parser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0d0f;
+      --surface: #161619;
+      --border: #2a2a2e;
+      --text: #e8e6e3;
+      --muted: #8b8685;
+      --accent: #c9a227;
+      --accent-dim: #8a7422;
+      --success: #4a9b6e;
+      --error: #c75c5c;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "DM Sans", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.25rem 0;
+      color: var(--text);
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .header-api-btn {
+      display: inline-block;
+      margin-top: 0.75rem;
+      text-decoration: none;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 3rem 2rem;
+      text-align: center;
+      background: var(--surface);
+      transition: border-color 0.2s, background 0.2s;
+      cursor: pointer;
+      margin-bottom: 2rem;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragover {
+      border-color: var(--accent-dim);
+      background: rgba(201, 162, 39, 0.06);
+    }
+
+    .upload-zone input[type="file"] {
+      display: none;
+    }
+
+    .upload-zone .icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.75rem;
+      opacity: 0.9;
+    }
+
+    .upload-zone .prompt {
+      font-size: 1rem;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .upload-zone .hint {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .preview-row {
+      display: none;
+      margin-bottom: 2rem;
+    }
+
+    .preview-row.visible {
+      display: block;
+    }
+
+    .preview-box {
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .preview-box img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      max-height: 320px;
+      object-fit: contain;
+      margin: 0 auto;
+    }
+
+    .preview-box .label {
+      padding: 0.6rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    .model-select {
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .model-select label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+
+    .model-select select {
+      width: 100%;
+      max-width: 420px;
+      padding: 0.5rem 0.75rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .model-select select:focus {
+      outline: none;
+      border-color: var(--accent-dim);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.05s;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #d4ad2a;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      border-color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .loading.visible {
+      display: block;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading .msg {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .results {
+      display: none;
+      margin-top: 2rem;
+    }
+
+    .results.visible {
+      display: block;
+    }
+
+    .results h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 0 0 1rem 0;
+      color: var(--text);
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .result-card img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 320px;
+      object-fit: contain;
+      background: var(--bg);
+    }
+
+    .result-card .title {
+      padding: 0.6rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-top: 1px solid var(--border);
+    }
+
+    .customize-section {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .customize-section h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0 0 1rem 0;
+      color: var(--text);
+    }
+
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--surface);
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .color-row label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      min-width: 4rem;
+      text-transform: capitalize;
+    }
+
+    .color-row input[type="color"] {
+      width: 2.25rem;
+      height: 2.25rem;
+      padding: 2px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      background: var(--bg);
+    }
+
+    .color-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    .color-row input[type="color"]::-webkit-color-swatch { border: none; border-radius: 4px; }
+
+    .color-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .color-group-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .segment-note {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    .recolored-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 1rem 0 0.5rem 0;
+      color: var(--text);
+    }
+
+    .preview-label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin: 0.75rem 1rem 0.5rem;
+    }
+
+    .recolored-preview-img {
+      display: block;
+      max-width: 100%;
+      width: 100%;
+      height: auto;
+      max-height: 420px;
+      object-fit: contain;
+      background: var(--bg);
+      margin: 0;
+      border-radius: 0 0 var(--radius) var(--radius);
+      border-top: 1px solid var(--border);
+    }
+
+    .recolored-actions {
+      padding: 0.75rem 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .recolored-actions .btn {
+      font-size: 0.9rem;
+      padding: 0.6rem 1rem;
+    }
+
+    .edit-section {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .edit-section h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem 0;
+      color: var(--text);
+    }
+
+    .edit-section .edit-hint {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .editable-regions {
+      margin-bottom: 1rem;
+    }
+
+    .editable-regions-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .editable-regions-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .editable-regions-actions {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .editable-regions-sep {
+      margin: 0 0.25rem;
+    }
+
+    .btn-link {
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: inherit;
+      font-size: inherit;
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn-link:hover {
+      text-decoration: underline;
+    }
+
+    .editable-regions-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+    }
+
+    .editable-region-item {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .editable-region-item input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .error-toast {
+      display: none;
+      padding: 1rem 1.25rem;
+      background: rgba(199, 92, 92, 0.15);
+      border: 1px solid var(--error);
+      border-radius: var(--radius-sm);
+      color: #f0a0a0;
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .error-toast.visible {
+      display: block;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Clothing Segments</h1>
+      <p class="subtitle">Segment sleeve, collar area (top), arm, body, legs, face, hair & more — then customize colors</p>
+      <a href="/docs" target="_blank" rel="noopener" class="btn btn-ghost header-api-btn">API docs (Swagger)</a>
+    </header>
+
+    <div id="error" class="error-toast" role="alert"></div>
+
+    <div class="upload-zone" id="uploadZone" role="button" tabindex="0">
+      <input type="file" id="fileInput" accept="image/*">
+      <div class="icon">📷</div>
+      <div class="prompt">Drop an image here or click to choose</div>
+      <div class="hint">JPEG, PNG — single person works best</div>
+    </div>
+
+    <div id="previewRow" class="preview-row">
+      <div class="preview-box">
+        <img id="previewImg" src="" alt="Preview">
+        <div class="label" id="previewLabel">image.jpg</div>
+      </div>
+      <div class="model-select">
+        <label for="modelSelect">Model</label>
+        <select id="modelSelect">
+          <option value="fashion_fine">Fine-grained (49 classes) — sleeve, collar, cuff, neckband, hood, lapel, pocket, etc.</option>
+          <option value="fashn">Standard (18 classes) — face, hair, top, arms, body, legs, etc.</option>
+        </select>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="runBtn">Run segmentation</button>
+        <button type="button" class="btn btn-ghost" id="clearBtn">Choose another</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <div class="msg">Segmenting… (first run may download the model)</div>
+    </div>
+
+    <div id="results" class="results">
+      <h2>Recolor on your photo</h2>
+      <div class="results-grid">
+        <div class="result-card">
+          <img id="outOriginal" src="" alt="Original">
+          <div class="title">Original</div>
+        </div>
+      </div>
+
+      <div class="customize-section" id="customizeSection">
+        <h3>Customize segment colors</h3>
+        <p class="segment-note" id="segmentNote">Choose a color for each segment below. Changes apply on the real image.</p>
+        <div class="color-grid" id="colorGrid"></div>
+        <p class="recolored-title">Your photo with new colors</p>
+        <div class="result-card">
+          <img id="recoloredPreviewImg" class="recolored-preview-img" alt="Your photo with new colors" src="">
+          <div class="recolored-actions">
+            <button type="button" class="btn btn-primary" id="downloadRecoloredBtn">Download as image</button>
+          </div>
+        </div>
+
+      <div class="edit-section" id="editSection">
+        <h3>Regions to recolor</h3>
+        <p class="edit-hint">Check the segments you want to apply your custom colors to in the preview above. Unchecked segments keep the original photo.</p>
+        <div class="editable-regions">
+          <div class="editable-regions-header">
+            <span class="editable-regions-title">Apply custom color to (check to include):</span>
+            <span class="editable-regions-actions">
+              <button type="button" class="btn-link" id="selectAllRegionsBtn">Select all</button>
+              <span class="editable-regions-sep">·</span>
+              <button type="button" class="btn-link" id="deselectAllRegionsBtn">Deselect all</button>
+            </span>
+          </div>
+          <div class="editable-regions-grid" id="editableRegionsGrid"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <footer>
+      Models: <a href="https://huggingface.co/sayeed99/segformer-b2-fashion" target="_blank" rel="noopener">segformer-b2-fashion</a> (sleeve & collar) · <a href="https://huggingface.co/fashn-ai/fashn-human-parser" target="_blank" rel="noopener">fashn-human-parser</a>
+    </footer>
+  </div>
+
+  <script>
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const previewRow = document.getElementById('previewRow');
+    const previewImg = document.getElementById('previewImg');
+    const previewLabel = document.getElementById('previewLabel');
+    const runBtn = document.getElementById('runBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const loading = document.getElementById('loading');
+    const results = document.getElementById('results');
+    const errorEl = document.getElementById('error');
+    const outOriginal = document.getElementById('outOriginal');
+    const colorGrid = document.getElementById('colorGrid');
+    const customizeSection = document.getElementById('customizeSection');
+    const modelSelect = document.getElementById('modelSelect');
+    const segmentNote = document.getElementById('segmentNote');
+    const editSection = document.getElementById('editSection');
+    const editableRegionsGrid = document.getElementById('editableRegionsGrid');
+    const selectAllRegionsBtn = document.getElementById('selectAllRegionsBtn');
+    const deselectAllRegionsBtn = document.getElementById('deselectAllRegionsBtn');
+    const downloadRecoloredBtn = document.getElementById('downloadRecoloredBtn');
+    const recoloredPreviewImg = document.getElementById('recoloredPreviewImg');
+
+    let selectedFile = null;
+    let segmentData = null;  // { shape, class_mask, original_resized, segment_labels }
+    let editableSegmentIds = new Set();  // segment IDs checked = use custom color in recolor preview
+    let offscreenRecoloredCanvas = null;  // used only in memory to composite image, then we show result as img
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.classList.add('visible');
+    }
+
+    function hideError() {
+      errorEl.classList.remove('visible');
+    }
+
+    function setPreview(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+      selectedFile = file;
+      previewLabel.textContent = file.name;
+      const url = URL.createObjectURL(file);
+      previewImg.src = url;
+      previewRow.classList.add('visible');
+      results.classList.remove('visible');
+      hideError();
+    }
+
+    function clearPreview() {
+      if (previewImg.src) URL.revokeObjectURL(previewImg.src);
+      previewImg.src = '';
+      fileInput.value = '';
+      selectedFile = null;
+      segmentData = null;
+      previewRow.classList.remove('visible');
+      results.classList.remove('visible');
+      customizeSection.classList.remove('visible');
+      editSection.classList.remove('visible');
+      hideError();
+    }
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => setPreview(e.target.files[0]));
+
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      setPreview(e.dataTransfer.files[0]);
+    });
+
+    clearBtn.addEventListener('click', clearPreview);
+    downloadRecoloredBtn.addEventListener('click', downloadRecoloredImage);
+
+    function hexToRgb(hex) {
+      const n = parseInt(hex.slice(1), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+
+    function rgbToHsl(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+      if (max === min) return [0, 0, l];
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+      else if (max === g) h = ((b - r) / d + 2) / 6;
+      else h = ((r - g) / d + 4) / 6;
+      return [h, s, l];
+    }
+
+    function hslToRgb(h, s, l) {
+      let r, g, b;
+      if (s === 0) r = g = b = l;
+      else {
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+    }
+
+    function hue2rgb(p, q, t) {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    }
+
+    const GROUP_TITLES = {
+      body: 'Body',
+      clothing: 'Clothing',
+      accessories: 'Accessories',
+      background: 'Background',
+      garments: 'Garments',
+      parts: 'Parts (sleeve, collar, etc.)',
+    };
+
+    function buildColorPickers(labels) {
+      colorGrid.innerHTML = '';
+      const byGroup = {};
+      labels.forEach((item) => {
+        const g = item.group || 'body';
+        if (!byGroup[g]) byGroup[g] = [];
+        byGroup[g].push(item);
+      });
+      const order = ['background', 'garments', 'parts', 'body', 'clothing', 'accessories'];
+      const ordered = order.filter((g) => byGroup[g]?.length);
+      const rest = Object.keys(byGroup).filter((g) => !order.includes(g));
+      const groups = ordered.length ? [...ordered, ...rest] : Object.keys(byGroup);
+      groups.forEach((group) => {
+        const items = byGroup[group];
+        if (!items || !items.length) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'color-group';
+        const title = document.createElement('div');
+        title.className = 'color-group-title';
+        title.textContent = GROUP_TITLES[group] || group;
+        wrap.appendChild(title);
+        const grid = document.createElement('div');
+        grid.className = 'color-grid';
+        items.forEach(({ id, name, defaultHex }) => {
+          const row = document.createElement('div');
+          row.className = 'color-row';
+          const lab = document.createElement('label');
+          lab.textContent = name;
+          lab.htmlFor = 'color-' + id;
+          const input = document.createElement('input');
+          input.type = 'color';
+          input.id = 'color-' + id;
+          input.value = defaultHex;
+          input.dataset.classId = String(id);
+          input.addEventListener('input', () => drawRecoloredImage());
+          row.appendChild(lab);
+          row.appendChild(input);
+          grid.appendChild(row);
+        });
+        wrap.appendChild(grid);
+        colorGrid.appendChild(wrap);
+      });
+    }
+
+    function getCustomColors() {
+      const colors = {};
+      (segmentData.segment_labels || []).forEach(({ id, defaultHex }) => {
+        const input = document.getElementById('color-' + id);
+        colors[id] = input ? hexToRgb(input.value) : hexToRgb(defaultHex);
+      });
+      return colors;
+    }
+
+    function drawRecoloredImage() {
+      if (!segmentData) return;
+      const [height, width] = segmentData.shape;
+      if (!offscreenRecoloredCanvas || offscreenRecoloredCanvas.width !== width || offscreenRecoloredCanvas.height !== height) {
+        offscreenRecoloredCanvas = document.createElement('canvas');
+        offscreenRecoloredCanvas.width = width;
+        offscreenRecoloredCanvas.height = height;
+      }
+      const canvas = offscreenRecoloredCanvas;
+      const origImg = new Image();
+      const maskImg = new Image();
+      origImg.crossOrigin = maskImg.crossOrigin = 'anonymous';
+      let loaded = 0;
+      function maybeDraw() {
+        loaded++;
+        if (loaded < 2) return;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(origImg, 0, 0);
+        const outData = ctx.getImageData(0, 0, width, height);
+        const maskCan = document.createElement('canvas');
+        maskCan.width = width;
+        maskCan.height = height;
+        maskCan.getContext('2d').drawImage(maskImg, 0, 0);
+        const maskData = maskCan.getContext('2d').getImageData(0, 0, width, height);
+        const custom = getCustomColors();
+        for (let i = 0; i < outData.data.length; i += 4) {
+          const classId = maskData.data[i];
+          if (editableSegmentIds.has(classId) && custom[classId]) {
+            const oR = outData.data[i], oG = outData.data[i + 1], oB = outData.data[i + 2];
+            const [cR, cG, cB] = custom[classId];
+            const [oH, oS, oL] = rgbToHsl(oR, oG, oB);
+            const [cH, cS, cL] = rgbToHsl(cR, cG, cB);
+            const [r, g, b] = hslToRgb(cH, cS, oL);
+            outData.data[i] = r;
+            outData.data[i + 1] = g;
+            outData.data[i + 2] = b;
+          }
+        }
+        ctx.putImageData(outData, 0, 0);
+        recoloredPreviewImg.src = canvas.toDataURL('image/png');
+      }
+      origImg.onload = maybeDraw;
+      maskImg.onload = maybeDraw;
+      origImg.src = segmentData.original_resized;
+      maskImg.src = segmentData.class_mask;
+    }
+
+    function downloadRecoloredImage() {
+      if (!offscreenRecoloredCanvas || !offscreenRecoloredCanvas.width || !offscreenRecoloredCanvas.height) return;
+      const link = document.createElement('a');
+      link.download = (previewLabel.textContent || 'recolored').replace(/\.[^.]+$/, '') + '_recolored.png';
+      link.href = offscreenRecoloredCanvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function getPresentSegmentIds(classMaskDataUrl, shape, callback) {
+      const [height, width] = shape;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const can = document.createElement('canvas');
+        can.width = width;
+        can.height = height;
+        const ctx = can.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const data = ctx.getImageData(0, 0, width, height).data;
+        const present = new Set();
+        for (let i = 0; i < data.length; i += 4) present.add(data[i]);
+        callback(present);
+      };
+      img.onerror = () => callback(new Set());
+      img.src = classMaskDataUrl;
+    }
+
+    function setupEditableCheckboxes(labelsPresent) {
+      if (!segmentData || !labelsPresent || !labelsPresent.length) return;
+      editableRegionsGrid.innerHTML = '';
+      editableSegmentIds.clear();
+      labelsPresent.forEach(({ id, name }) => {
+          editableSegmentIds.add(id);
+          const label = document.createElement('label');
+          label.className = 'editable-region-item';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = true;
+          cb.dataset.segmentId = String(id);
+          cb.addEventListener('change', () => {
+            if (cb.checked) editableSegmentIds.add(id);
+            else editableSegmentIds.delete(id);
+            drawRecoloredImage();
+          });
+          label.appendChild(cb);
+          label.appendChild(document.createTextNode(name));
+          editableRegionsGrid.appendChild(label);
+        });
+        selectAllRegionsBtn.onclick = () => {
+          editableSegmentIds.clear();
+          editableRegionsGrid.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+            cb.checked = true;
+            editableSegmentIds.add(parseInt(cb.dataset.segmentId, 10));
+          });
+          drawRecoloredImage();
+        };
+      deselectAllRegionsBtn.onclick = () => {
+        editableSegmentIds.clear();
+        editableRegionsGrid.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+          cb.checked = false;
+        });
+        drawRecoloredImage();
+      };
+      drawRecoloredImage();
+    }
+
+    runBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      hideError();
+      loading.classList.add('visible');
+      runBtn.disabled = true;
+
+      try {
+        const form = new FormData();
+        form.append('file', selectedFile);
+        form.append('model', modelSelect.value);
+        const res = await fetch('/api/segment', {
+          method: 'POST',
+          body: form,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const d = data.detail;
+          const msg = Array.isArray(d) ? (d[0]?.msg || d[0]) : (d || res.statusText);
+          throw new Error(msg || 'Segment request failed');
+        }
+        outOriginal.src = previewImg.src;
+        segmentData = {
+          shape: data.shape,
+          class_mask: 'data:image/png;base64,' + data.class_mask,
+          original_resized: 'data:image/png;base64,' + data.original_resized,
+          segment_labels: data.segment_labels || data.clothing_labels || [],
+          model: data.model || 'fashn',
+        };
+        segmentNote.textContent = data.model === 'fashion_fine'
+          ? 'Only segments present in the image are shown. Pick a color for each.'
+          : 'Only segments present in the image are shown.';
+        results.classList.add('visible');
+        customizeSection.classList.add('visible');
+        editSection.classList.add('visible');
+        getPresentSegmentIds(segmentData.class_mask, segmentData.shape, (presentIds) => {
+          const labelsPresent = segmentData.segment_labels.filter((l) => presentIds.has(l.id));
+          buildColorPickers(labelsPresent);
+          setupEditableCheckboxes(labelsPresent);
+          drawRecoloredImage();
+        });
+        results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) {
+        showError(err.message || 'Something went wrong. Try another image.');
+      } finally {
+        loading.classList.remove('visible');
+        runBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
