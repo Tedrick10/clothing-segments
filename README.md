@@ -15,6 +15,10 @@ Human parsing and clothing segmentation for fashion images. Segment body and gar
 
 **Use cases:** Virtual try-on, product configurators, Laravel-backed admin (set editable regions) + React Native app (recolor UI).
 
+**Integration guides:**  
+- **[LARAVEL.md](LARAVEL.md)** — How to integrate Laravel (admin config, store editable regions, expose API for the app).  
+- **[REACT_NATIVE.md](REACT_NATIVE.md)** — How to integrate React Native (fetch config from Laravel, call segment API, recolor UI, composite image).
+
 ---
 
 ## Project structure
@@ -31,7 +35,9 @@ clothing-segments/
 ├── run.py               # CLI segmentation
 ├── example_usage.py     # Example Python script
 ├── requirements.txt
-└── README.md
+├── README.md
+├── LARAVEL.md            # Laravel integration guide
+└── REACT_NATIVE.md       # React Native integration guide
 ```
 
 - **Backend:** Python, FastAPI, PyTorch, Transformers. Optional: `fashn-human-parser` for best fashn accuracy.
@@ -200,7 +206,7 @@ GET {CLOTHING_SEGMENTS_URL}/api/segment-schema
 
 **API documentation (this service):** `{BASE_URL}/docs` (Swagger) · `{BASE_URL}/redoc` (ReDoc) · `{BASE_URL}/openapi.json` (OpenAPI JSON).
 
-Example base URL: `http://localhost:8000` or `https://your-segment-service.com`.
+Example base URL: `https://clothing-segments.onrender.com` (production) or `http://localhost:8000` (local).
 
 Response:
 
@@ -304,7 +310,7 @@ When the user picks a photo, send it to the Clothing Segments API with the same 
 - **Body:** `file` (image file), `model` (`"fashn"` or `"fashion_fine"`), `editable_region_ids` (JSON string, e.g. `"[32,29,47,48]"`).
 
 ```js
-const CLOTHING_SEGMENTS_URL = 'http://localhost:8000'; // or your deployed URL
+const CLOTHING_SEGMENTS_URL = 'https://clothing-segments.onrender.com';
 
 const formData = new FormData();
 formData.append('file', {
@@ -358,7 +364,7 @@ Laravel decides **which** regions are editable; this API returns only those (and
 Point Laravel and React Native to the same base URL for this service:
 
 - **Development:** `http://localhost:8000`
-- **Production:** `https://your-segment-service.com`
+- **Production:** `https://clothing-segments.onrender.com`
 
 Then:
 
@@ -386,7 +392,7 @@ Then:
 
 Response includes: `shape`, `model`, `num_classes`, `mask`, `segmentation`, `clothing_segmentation`, `overlay`, `class_mask`, `original_resized`, `segment_labels`, `clothing_labels`, `labels`.
 
-Full request/response schemas: open [Swagger](http://127.0.0.1:8000/docs) or [ReDoc](http://127.0.0.1:8000/redoc).
+Full request/response schemas: [Swagger](https://clothing-segments.onrender.com/docs) · [ReDoc](https://clothing-segments.onrender.com/redoc).
 
 ---
 

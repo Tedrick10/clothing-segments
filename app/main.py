@@ -1,7 +1,7 @@
 """
 Web API for clothing segmentation.
 Run: uvicorn app.main:app --reload
-Swagger UI: http://127.0.0.1:8000/docs
+Swagger UI: https://clothing-segments.onrender.com/docs
 """
 
 import base64
