@@ -1,6 +1,8 @@
 """Segmentation visualization (no matplotlib)."""
 
 import io
+from typing import Optional
+
 import numpy as np
 from PIL import Image
 
@@ -40,7 +42,7 @@ def overlay_image(
     segmentation: np.ndarray,
     image_rgb: np.ndarray,
     alpha: float = 0.5,
-    seg_rgb_override: np.ndarray | None = None,
+    seg_rgb_override: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """Blend segmentation colors over image. image_rgb (H,W,3). Returns (H,W,3) uint8."""
     seg_rgb = seg_rgb_override if seg_rgb_override is not None else segmentation_to_rgb(segmentation)

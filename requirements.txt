@@ -2,7 +2,7 @@
 torch>=2.0.0
 transformers>=4.30.0
 Pillow>=9.0.0
-numpy>=1.21.0
+numpy>=1.21.0,<2
 
 # Production parser (recommended for best accuracy)
 fashn-human-parser>=0.1.0

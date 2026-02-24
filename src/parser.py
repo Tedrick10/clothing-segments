@@ -215,7 +215,7 @@ class FashionFineParser:
         else:
             pil_image = Image.open(image).convert("RGB")
 
-        inputs = self._processor(images=pil_image, return_tensors="pt")
+        inputs = self._processor(images=pil_image, return_tensors="pt", padding=True)
         inputs = {k: v.to(self._device) for k, v in inputs.items()}
 
         with torch.no_grad():
