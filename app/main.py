@@ -112,6 +112,26 @@ async def index():
 
 
 @app.get(
+    "/api/segment-available",
+    summary="Check if segmentation is available",
+    description="Returns whether the segmentation API is configured (BACKEND_URL or full stack). Used by the UI to show a message when running on Vercel without a backend.",
+    tags=["API"],
+)
+async def segment_available():
+    """Tell the frontend if segmentation is available (backend configured or full deps)."""
+    if BACKEND_URL:
+        return {"available": True, "message": "Segmentation available (proxy to backend)."}
+    try:
+        import torch  # noqa: F401
+        return {"available": True, "message": "Segmentation available (full stack)."}
+    except ImportError:
+        return {
+            "available": False,
+            "message": "Segmentation is not available on this deployment (Vercel cannot run the ML models). Run locally: pip install -r requirements-full.txt then uvicorn app.main:app --reload",
+        }
+
+
+@app.get(
     "/api/segment-schema",
     response_model=SegmentSchemaResponse,
     summary="Get segment schema",

@@ -138,17 +138,12 @@ To stop the server, press **Ctrl+C** in the terminal.
 
 ## Deployment
 
-### Vercel (proxy mode)
+### Vercel (UI only or proxy mode)
 
-Vercel serverless functions have a **500 MB** size limit. PyTorch + Transformers exceed this, so the app cannot run the ML models directly on Vercel.
+Vercel serverless functions have a **500 MB** size limit. PyTorch + Transformers exceed this, so **segmentation cannot run on Vercel alone**.
 
-The repo uses **minimal `requirements.txt`** (FastAPI, httpx, no torch) so Vercel installs stay under the limit. Use **proxy mode** so the deployment forwards API requests to your full backend:
-
-1. Deploy the **full API** (with PyTorch) to **Fly.io** or **Render** (see below). Note the public URL (e.g. `https://clothing-segments.fly.dev`).
-2. In the Vercel project, set the environment variable **`BACKEND_URL`** to that URL (e.g. `https://clothing-segments.fly.dev`, no trailing slash).
-3. When `BACKEND_URL` is set, `/api/segment` and `/api/segment-schema` are proxied to that URL.
-
-Result: Vercel serves the static UI and proxies segmentation requests to your Fly/Render backend; the 500 MB limit is not exceeded.
+- **Vercel only (no backend):** The app deploys and shows the UI. A banner explains that segmentation is not available and how to run locally. To use segmentation, run the app locally (see [How to run the project](#how-to-run-the-project)) with `pip install -r requirements-full.txt`.
+- **Vercel + backend (proxy mode):** Deploy the full API to **Fly.io** or **Render** (see below), then in the Vercel project set **`BACKEND_URL`** to that URL. The Vercel app will then proxy `/api/segment` and `/api/segment-schema` to your backend so segmentation works from the live site.
 
 ### Full API (Fly.io or Render)
 

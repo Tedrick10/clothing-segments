@@ -502,6 +502,24 @@
       display: block;
     }
 
+    .info-banner {
+      padding: 1rem 1.25rem;
+      background: rgba(201, 162, 39, 0.12);
+      border: 1px solid var(--accent-dim);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .info-banner code {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.85em;
+      background: rgba(0,0,0,0.2);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+    }
+
     footer {
       text-align: center;
       margin-top: 3rem;
@@ -530,6 +548,7 @@
     </header>
 
     <div id="error" class="error-toast" role="alert"></div>
+    <div id="infoBanner" class="info-banner" style="display: none;" role="status"></div>
 
     <div class="upload-zone" id="uploadZone" role="button" tabindex="0">
       <input type="file" id="fileInput" accept="image/*">
@@ -616,6 +635,7 @@
     const loading = document.getElementById('loading');
     const results = document.getElementById('results');
     const errorEl = document.getElementById('error');
+    const infoBanner = document.getElementById('infoBanner');
     const outOriginal = document.getElementById('outOriginal');
     const colorGrid = document.getElementById('colorGrid');
     const customizeSection = document.getElementById('customizeSection');
@@ -682,6 +702,18 @@
 
     clearBtn.addEventListener('click', clearPreview);
     downloadRecoloredBtn.addEventListener('click', downloadRecoloredImage);
+
+    // Show info banner when segmentation is not available (e.g. Vercel without BACKEND_URL)
+    (async function checkSegmentAvailable() {
+      try {
+        const res = await fetch('/api/segment-available');
+        const data = await res.json().catch(() => ({}));
+        if (data.available === false && data.message) {
+          infoBanner.textContent = data.message;
+          infoBanner.style.display = 'block';
+        }
+      } catch (_) {}
+    })();
 
     function hexToRgb(hex) {
       const n = parseInt(hex.slice(1), 16);
