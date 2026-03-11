@@ -121,11 +121,26 @@ async def index():
 async def segment_schema():
     if BACKEND_URL:
         import httpx
-        async with httpx.AsyncClient() as client:
-            r = await client.get(f"{BACKEND_URL}/api/segment-schema")
-            r.raise_for_status()
-            return r.json()
-    from src.visualize import get_all_segment_labels, get_fashion_fine_segment_labels
+        try:
+            async with httpx.AsyncClient() as client:
+                r = await client.get(f"{BACKEND_URL}/api/segment-schema")
+                if r.is_success:
+                    return r.json()
+                raise HTTPException(status_code=r.status_code, detail=r.text or r.reason_phrase)
+        except HTTPException:
+            raise
+        except (httpx.ConnectError, httpx.ConnectTimeout):
+            raise HTTPException(
+                503,
+                detail="Segmentation backend unreachable. Set BACKEND_URL to your full API URL (Fly.io or Render).",
+            )
+    try:
+        from src.visualize import get_all_segment_labels, get_fashion_fine_segment_labels
+    except ImportError:
+        raise HTTPException(
+            503,
+            detail="Segmentation not configured. Set BACKEND_URL in Vercel to your full API URL (Fly.io or Render), or run locally with: pip install -r requirements-full.txt",
+        )
     return SegmentSchemaResponse(
         fashn=get_all_segment_labels(),
         fashion_fine=get_fashion_fine_segment_labels(),
@@ -165,14 +180,43 @@ async def segment(
     if BACKEND_URL:
         import httpx
         contents = await file.read()
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            files = {"file": (file.filename or "image.jpg", contents, file.content_type)}
-            data = {"model": model}
-            if editable_region_ids is not None:
-                data["editable_region_ids"] = editable_region_ids
-            r = await client.post(f"{BACKEND_URL}/api/segment", files=files, data=data)
-            r.raise_for_status()
-            return r.json()
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                files = {"file": (file.filename or "image.jpg", contents, file.content_type)}
+                data = {"model": model}
+                if editable_region_ids is not None:
+                    data["editable_region_ids"] = editable_region_ids
+                r = await client.post(f"{BACKEND_URL}/api/segment", files=files, data=data)
+                if r.is_success:
+                    return r.json()
+                detail = r.text
+                try:
+                    body = r.json()
+                    if isinstance(body, dict) and "detail" in body:
+                        detail = body["detail"]
+                except Exception:
+                    pass
+                raise HTTPException(status_code=r.status_code, detail=detail or r.reason_phrase)
+        except HTTPException:
+            raise
+        except (httpx.ConnectError, httpx.ConnectTimeout) as e:
+            raise HTTPException(
+                503,
+                detail="Segmentation backend unreachable. Deploy the full API to Fly.io or Render and set BACKEND_URL to that URL in Vercel.",
+            ) from e
+        except httpx.TimeoutException:
+            raise HTTPException(504, detail="Segmentation backend timed out. Try a smaller image or try again.")
+        except Exception as e:
+            raise HTTPException(502, detail=str(e)) from e
+
+    # No BACKEND_URL and we're on Vercel/minimal deps → cannot run ML
+    try:
+        import torch  # noqa: F401
+    except ImportError:
+        raise HTTPException(
+            503,
+            detail="Segmentation not configured. Set BACKEND_URL in Vercel to your full API URL (Fly.io or Render), or run locally with: pip install -r requirements-full.txt",
+        )
 
     editable_ids = None
     if editable_region_ids:
