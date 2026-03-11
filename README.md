@@ -34,7 +34,8 @@ clothing-segments/
 │   └── visualize.py     # Palettes, segment labels, cuff/neckband derivation
 ├── run.py               # CLI segmentation
 ├── example_usage.py     # Example Python script
-├── requirements.txt
+├── requirements.txt        # Minimal (Vercel proxy mode)
+├── requirements-full.txt   # Full stack for local / Fly / Render
 ├── README.md
 ├── LARAVEL.md            # Laravel integration guide
 └── REACT_NATIVE.md       # React Native integration guide
@@ -83,11 +84,12 @@ Follow these steps to get the project running on your machine.
      .venv\Scripts\Activate.ps1
      ```
 
-4. **Install dependencies:**
+4. **Install dependencies** (full stack with PyTorch for local/self-hosted):
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements-full.txt
    ```
-   Wait until all packages (PyTorch, Transformers, FastAPI, etc.) finish installing.
+   Wait until all packages (PyTorch, Transformers, FastAPI, etc.) finish installing.  
+   *(For Vercel, the repo uses minimal `requirements.txt` so the deploy stays under the 500 MB limit; set `BACKEND_URL` to your full API.)*
 
 ### Run the web app
 
@@ -131,6 +133,27 @@ To stop the server, press **Ctrl+C** in the terminal.
    ```bash
    python run.py path/to/image.jpg --backend pipeline
    ```
+
+---
+
+## Deployment
+
+### Vercel (proxy mode)
+
+Vercel serverless functions have a **500 MB** size limit. PyTorch + Transformers exceed this, so the app cannot run the ML models directly on Vercel.
+
+The repo uses **minimal `requirements.txt`** (FastAPI, httpx, no torch) so Vercel installs stay under the limit. Use **proxy mode** so the deployment forwards API requests to your full backend:
+
+1. Deploy the **full API** (with PyTorch) to **Fly.io** or **Render** (see below). Note the public URL (e.g. `https://clothing-segments.fly.dev`).
+2. In the Vercel project, set the environment variable **`BACKEND_URL`** to that URL (e.g. `https://clothing-segments.fly.dev`, no trailing slash).
+3. When `BACKEND_URL` is set, `/api/segment` and `/api/segment-schema` are proxied to that URL.
+
+Result: Vercel serves the static UI and proxies segmentation requests to your Fly/Render backend; the 500 MB limit is not exceeded.
+
+### Full API (Fly.io or Render)
+
+- **Fly.io:** `fly.toml` is included. Run `fly launch` (or `fly deploy`) and use a machine with enough memory (e.g. 1 GB). The Dockerfile installs full `requirements.txt`.
+- **Render:** Use a Web Service with the same Dockerfile (uses `requirements-full.txt`) or a build command that runs `pip install -r requirements-full.txt` and `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
 
 ---
 

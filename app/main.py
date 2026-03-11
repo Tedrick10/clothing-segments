@@ -2,11 +2,15 @@
 Web API for clothing segmentation.
 Run: uvicorn app.main:app --reload
 Swagger UI: https://clothing-segments.onrender.com/docs
+
+Vercel: set env BACKEND_URL to your full API (e.g. Fly.io/Render) and use
+requirements-vercel.txt so /api/* is proxied and heavy deps (torch, transformers) are not installed.
 """
 
 import base64
 import io
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -19,24 +23,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel, Field
-import numpy as np
-from PIL import Image
 
-from src.parser import HumanParser, FashionFineParser, SEGMENT_LABELS
-from src.visualize import (
-    overlay_image,
-    segmentation_to_rgb,
-    mask_to_png_bytes,
-    rgb_to_png_bytes,
-    class_mask_to_png_bytes,
-    get_clothing_default_hex,
-    get_all_segment_labels,
-    get_fashion_fine_segment_labels,
-    clothing_only_rgb,
-    segmentation_to_rgb_fashion_fine,
-    derive_cuff_neckband,
-    FASHION_FINE_NUM_CLASSES,
-)
+# Proxy mode: when set, /api/segment and /api/segment-schema forward to this URL.
+# Avoids loading torch/transformers on Vercel (500 MB limit). Use with requirements-vercel.txt.
+BACKEND_URL = os.environ.get("BACKEND_URL", "").rstrip("/")
 
 
 # --- OpenAPI / Swagger response models ---
@@ -94,13 +84,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Lazy-load parsers on first request
+# Lazy-load parsers on first request (only when not in proxy mode)
 _parser_fashn = None
 _parser_fashion_fine = None
 
 
-def get_parser(model: str):
+def _get_parser(model: str):
+    """Load parser (requires torch/transformers). Only used when BACKEND_URL is not set."""
     global _parser_fashn, _parser_fashion_fine
+    from src.parser import HumanParser, FashionFineParser
     if model == "fashion_fine":
         if _parser_fashion_fine is None:
             _parser_fashion_fine = FashionFineParser()
@@ -127,6 +119,13 @@ async def index():
     tags=["API"],
 )
 async def segment_schema():
+    if BACKEND_URL:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            r = await client.get(f"{BACKEND_URL}/api/segment-schema")
+            r.raise_for_status()
+            return r.json()
+    from src.visualize import get_all_segment_labels, get_fashion_fine_segment_labels
     return SegmentSchemaResponse(
         fashn=get_all_segment_labels(),
         fashion_fine=get_fashion_fine_segment_labels(),
@@ -162,12 +161,43 @@ async def segment(
     if model not in ("fashn", "fashion_fine"):
         model = "fashn"
 
+    # Proxy to full backend when running on Vercel (avoids bundling torch/transformers)
+    if BACKEND_URL:
+        import httpx
+        contents = await file.read()
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            files = {"file": (file.filename or "image.jpg", contents, file.content_type)}
+            data = {"model": model}
+            if editable_region_ids is not None:
+                data["editable_region_ids"] = editable_region_ids
+            r = await client.post(f"{BACKEND_URL}/api/segment", files=files, data=data)
+            r.raise_for_status()
+            return r.json()
+
     editable_ids = None
     if editable_region_ids:
         try:
             editable_ids = set(json.loads(editable_region_ids))
         except (json.JSONDecodeError, TypeError):
             pass
+
+    import numpy as np
+    from PIL import Image
+    from src.parser import SEGMENT_LABELS
+    from src.visualize import (
+        overlay_image,
+        segmentation_to_rgb,
+        mask_to_png_bytes,
+        rgb_to_png_bytes,
+        class_mask_to_png_bytes,
+        get_clothing_default_hex,
+        get_all_segment_labels,
+        get_fashion_fine_segment_labels,
+        clothing_only_rgb,
+        segmentation_to_rgb_fashion_fine,
+        derive_cuff_neckband,
+        FASHION_FINE_NUM_CLASSES,
+    )
 
     contents = await file.read()
     try:
@@ -176,7 +206,7 @@ async def segment(
         raise HTTPException(400, f"Invalid image: {e}")
 
     img_np = np.array(img)
-    parser, model_used = get_parser(model)
+    parser, model_used = _get_parser(model)
     segmentation = parser.predict(img_np)
 
     if model_used == "fashion_fine":

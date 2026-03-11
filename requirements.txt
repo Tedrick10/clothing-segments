@@ -1,16 +1,6 @@
-# FASHN Human Parser - clothing segmentation
-torch>=2.0.0
-transformers>=4.30.0
-Pillow>=9.0.0
-numpy>=1.21.0,<2
-
-# Production parser (recommended for best accuracy)
-fashn-human-parser>=0.1.0
-
-# Optional: visualization
-matplotlib>=3.5.0
-
-# Web app
+# Minimal deps for Vercel (proxy mode). Vercel installs this file automatically.
+# Set env BACKEND_URL to your full API (Fly.io/Render). For local/full API use: pip install -r requirements-full.txt
 fastapi>=0.100.0
 uvicorn[standard]>=0.22.0
 python-multipart>=0.0.6
+httpx>=0.24.0

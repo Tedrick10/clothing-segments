@@ -1,0 +1,7 @@
+# Minimal deps for Vercel serverless (proxy mode).
+# Set env BACKEND_URL to your full API (e.g. Fly.io or Render) so /api/* is proxied.
+# Do not install requirements.txt on Vercel; use this file instead (see vercel.json).
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+python-multipart>=0.0.6
+httpx>=0.24.0
