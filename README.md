@@ -150,6 +150,30 @@ Vercel serverless functions have a **500 MB** size limit. PyTorch + Transformers
 - **Fly.io:** `fly.toml` is included. Run `fly launch` (or `fly deploy`) and use a machine with enough memory (e.g. 1 GB). The Dockerfile installs full `requirements.txt`.
 - **Render:** Use a Web Service with the same Dockerfile (uses `requirements-full.txt`) or a build command that runs `pip install -r requirements-full.txt` and `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
 
+### cPanel / Shared hosting — အဆင့် ၄ — Project ဖိုင်များ Upload / Clone လုပ်ခြင်း
+
+**Option A — cPanel File Manager ဖြင့် upload**
+
+1. **cPanel File Manager ဖွင့်ပါ။**
+2. **public_html** (သို့) subdomain အတွက် **Document Root** folder ထဲကို သွားပါ။
+3. **Folder အသစ် ဖန်တီးပါ** — ဥပမာ `clothingsegement`။
+4. အဲဒီ folder ထဲကို project ဖိုင်များ **upload** လုပ်ပါ:
+   - **app** (folder ပါပါ)
+   - **src** (folder ပါပါ)
+   - **requirements-full.txt**
+   - **run.py**, **example_usage.py** (ရှိရင်)
+   - **.python-version** သို့မဟုတ် config ဖိုင် (လိုရင်)
+
+**Option B — SSH ရရင် server ပေါ်မှာ clone လုပ်ခြင်း**
+
+```bash
+cd /home/nebwintech/public_html
+git clone https://github.com/YourUsername/clothing-segments.git clothingsegement
+cd clothingsegement
+```
+
+လိုက်လုပ်ပြီး upload / clone လုပ်ထားပါ။ ထို့နောက် Python environment ဖန်တီးပြီး `pip install -r requirements-full.txt` နှင့် `uvicorn app.main:app --host 0.0.0.0 --port 8000` (သို့) hosting ပေးထားသော port ဖြင့် run ပါ။
+
 ---
 
 ## Usage
